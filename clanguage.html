@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroCompass | Direction & Navigation</title>
+  <style> 
+       /* ==========================================================================
+   Variables & Theme Tokens
+   ========================================================================== */
+:root {
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  --glass-bg: rgba(30, 41, 59, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  
+  --primary-color: #38bdf8;
+  --primary-glow: rgba(56, 189, 248, 0.35);
+  --accent-color: #f43f5e;
+  --accent-glow: rgba(244, 63, 94, 0.4);
+  --success-color: #10b981;
+  
+  --compass-face-bg: radial-gradient(circle, rgba(30,41,59,0.8) 0%, rgba(15,23,42,0.95) 100%);
+  --compass-ring: rgba(255, 255, 255, 0.15);
+  --needle-north: #ef4444;
+  --needle-south: #94a3b8;
+  
+  --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.light-mode {
+  --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #f1f5f9 50%, #e0e7ff 100%);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+  
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  
+  --primary-color: #0284c7;
+  --primary-glow: rgba(2, 132, 199, 0.25);
+  --accent-color: #e11d48;
+  
+  --compass-face-bg: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(241,245,249,0.95) 100%);
+  --compass-ring: rgba(0, 0, 0, 0.1);
+  --needle-south: #64748b;
+}
+
+/* ==========================================================================
+   Reset & Core Layout
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+  overflow-x: hidden;
+  transition: background 0.5s ease, color 0.3s ease;
+}
+
+#particles-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1100px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ==========================================================================
+   Glassmorphism Styles
+   ========================================================================== */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 24px;
+  padding: 1.5rem;
+  transition: transform 0.3s var(--transition-smooth), box-shadow 0.3s ease;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--primary-color);
+  animation: pulse-glow 3s infinite alternate;
+}
+
+.logo h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ==========================================================================
+   Buttons & Badges
+   ========================================================================== */
+.btn {
+  border: none;
+  outline: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s var(--transition-smooth);
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: #fff;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid var(--glass-border);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.btn-icon {
+  padding: 0.6rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border: 1px solid var(--glass-border);
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+.btn-icon-text {
+  background: transparent;
+  color: var(--primary-color);
+  padding: 0.2rem 0.5rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+}
+
+.badge-accent {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+.badge-accent:hover {
+  background: rgba(56, 189, 248, 0.25);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #eab308;
+}
+
+.status-dot.active {
+  background-color: var(--success-color);
+  box-shadow: 0 0 8px var(--success-color);
+}
+
+/* ==========================================================================
+   Grid Layout
+   ========================================================================== */
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ==========================================================================
+   Compass Section
+   ========================================================================== */
+.compass-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compass-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compass-wrapper {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 1.5rem 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.heading-indicator {
+  position: absolute;
+  top: -12px;
+  z-index: 10;
+}
+
+.indicator-arrow {
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 14px solid var(--accent-color);
+  filter: drop-shadow(0 2px 4px var(--accent-glow));
+}
+
+.compass-dial {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--compass-face-bg);
+  border: 6px solid var(--compass-ring);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), var(--glass-shadow);
+  transition: transform 0.15s ease-out;
+  user-select: none;
+}
+
+/* Dynamic tick lines inside compass */
+.tick-mark {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 8px;
+  background: var(--text-muted);
+  transform-origin: 50% 140px;
+  opacity: 0.4;
+}
+
+.tick-mark.major {
+  height: 12px;
+  width: 2px;
+  background: var(--text-main);
+  opacity: 0.8;
+}
+
+.cardinal-label {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform-origin: 50% 126px;
+  transform: translateX(-50%);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.cardinal-label.N { color: var(--accent-color); font-size: 1.05rem; }
+
+.dial-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 1px dashed var(--glass-border);
+  pointer-events: none;
+}
+
+/* Rotating Needle */
+.compass-needle {
+  position: absolute;
+  width: 20px;
+  height: 220px;
+  z-index: 5;
+  transform-origin: center center;
+  transition: transform 0.15s ease-out;
+  pointer-events: none;
+}
+
+.needle-north {
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 110px solid var(--needle-north);
+  position: relative;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.5));
+}
+
+.needle-north span {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.needle-south {
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 110px solid var(--needle-south);
+}
+
+.needle-pivot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  border: 3px solid var(--primary-color);
+}
+
+.readout-display {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.degree-readout {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(180deg, var(--text-main) 0%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cardinal-readout {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Direction Quick Pickers */
+.direction-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  width: 100%;
+  margin-bottom: 1.25rem;
+}
+
+.dir-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  padding: 0.4rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dir-chip:hover, .dir-chip.active {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+.controls-group {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.controls-group .btn {
+  flex: 1;
+}
+
+/* ==========================================================================
+   Telemetry Card
+   ========================================================================== */
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.card-title i {
+  width: 18px;
+  height: 18px;
+  color: var(--primary-color);
+  margin-right: 0.4rem;
+}
+
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tele-item {
+  background: rgba(0, 0, 0, 0.15);
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.tele-item .label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.tele-item .value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  word-break: break-all;
+}
+
+.tele-footer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.timestamp-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.timestamp-label i {
+  width: 14px;
+  height: 14px;
+}
+
+.telemetry-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.telemetry-actions .btn {
+  flex: 1;
+}
+
+/* ==========================================================================
+   Radar / Map Placeholder
+   ========================================================================== */
+.radar-container {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(0,0,0,0.3) 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.radar-grid {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.radar-sweep {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, rgba(16, 185, 129, 0.3) 360deg);
+  animation: radar-spin 4s linear infinite;
+  border-radius: 50%;
+}
+
+.radar-center {
+  width: 8px;
+  height: 8px;
+  background-color: var(--success-color);
+  border-radius: 50%;
+  z-index: 2;
+  box-shadow: 0 0 10px var(--success-color);
+}
+
+.radar-blip {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #38bdf8;
+  border-radius: 50%;
+  z-index: 3;
+  display: none;
+  box-shadow: 0 0 12px #38bdf8;
+  animation: pulse 1.5s infinite;
+}
+
+.radar-placeholder-text {
+  position: absolute;
+  bottom: 8px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  z-index: 2;
+  background: rgba(0,0,0,0.5);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   History Card
+   ========================================================================== */
+.history-list {
+  list-style: none;
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.history-empty {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+@keyframes radar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+@keyframes pulse-glow {
+  0% { filter: drop-shadow(0 0 2px var(--primary-glow)); }
+  100% { filter: drop-shadow(0 0 10px var(--primary-color)); }
+}
+
+.calibrating {
+  animation: calibrate-spin 1.5s ease-in-out infinite;
+}
+
+@keyframes calibrate-spin {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg) scale(0.95); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mode toggles for sun/moon icons */
+.dark-mode .icon-sun { display: block; }
+.dark-mode .icon-moon { display: none; }
+.light-mode .icon-sun { display: none; }
+.light-mode .icon-moon { display: block; }
+
+.icon-max { display: block; }
+.icon-min { display: none; }
+:fullscreen .icon-max { display: none; }
+:fullscreen .icon-min { display: block; }
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+@media (max-width: 850px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 0.75rem;
+  }
+  
+  .compass-wrapper {
+    width: 230px;
+    height: 230px;
+  }
+  
+  .tick-mark {
+    transform-origin: 50% 115px;
+  }
+  
+  .cardinal-label {
+    transform-origin: 50% 101px;
+  }
+  
+  .compass-needle {
+    height: 180px;
+  }
+  
+  .needle-north {
+    border-bottom-width: 90px;
+  }
+  
+  .needle-south {
+    border-top-width: 90px;
+  }
+}
+  </style>
+  
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dark-mode">
+  <!-- Floating background particles canvas -->
+  <canvas id="particles-canvas"></canvas>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="glass-card header">
+      <div class="logo">
+        <i data-lucide="compass" class="logo-icon"></i>
+        <h1>AeroCompass</h1>
+      </div>
+      <div class="header-actions">
+        <button id="theme-toggle" class="btn btn-icon" title="Toggle Theme">
+          <i data-lucide="sun" class="icon-sun"></i>
+          <i data-lucide="moon" class="icon-moon"></i>
+        </button>
+        <button id="fullscreen-btn" class="btn btn-icon" title="Fullscreen">
+          <i data-lucide="maximize" class="icon-max"></i>
+          <i data-lucide="minimize" class="icon-min"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="main-content">
+      <!-- Left Column: Interactive Compass -->
+      <section class="glass-card compass-section">
+        <div class="compass-header">
+          <span class="badge" id="sensor-status">
+            <span class="status-dot"></span> Manual Mode
+          </span>
+          <span class="badge badge-accent" id="calibration-btn">Calibrate</span>
+        </div>
+
+        <div class="compass-wrapper">
+          <div class="heading-indicator">
+            <div class="indicator-arrow"></div>
+          </div>
+          
+          <div class="compass-dial" id="compass-dial">
+            <!-- Degree tick marks and direction ticks generated via script -->
+            <div class="dial-center"></div>
+          </div>
+
+          <div class="compass-needle" id="compass-needle">
+            <div class="needle-north"><span>N</span></div>
+            <div class="needle-south"></div>
+            <div class="needle-pivot"></div>
+          </div>
+        </div>
+
+        <div class="readout-display">
+          <div class="degree-readout" id="degree-readout">0°</div>
+          <div class="cardinal-readout" id="cardinal-readout">North</div>
+        </div>
+
+        <!-- Direction Picker Shortcuts -->
+        <div class="direction-shortcuts">
+          <button class="dir-chip" data-degree="0">N</button>
+          <button class="dir-chip" data-degree="45">NE</button>
+          <button class="dir-chip" data-degree="90">E</button>
+          <button class="dir-chip" data-degree="135">SE</button>
+          <button class="dir-chip" data-degree="180">S</button>
+          <button class="dir-chip" data-degree="225">SW</button>
+          <button class="dir-chip" data-degree="270">W</button>
+          <button class="dir-chip" data-degree="315">NW</button>
+        </div>
+
+        <div class="controls-group">
+          <button id="detect-loc-btn" class="btn btn-primary">
+            <i data-lucide="navigation"></i> Detect Location
+          </button>
+          <button id="reset-compass-btn" class="btn btn-secondary">
+            <i data-lucide="rotate-ccw"></i> Reset
+          </button>
+        </div>
+      </section>
+
+      <!-- Right Column: Data Panels -->
+      <section class="right-column">
+        <!-- Live Telemetry Card -->
+        <div class="glass-card telemetry-card">
+          <div class="card-title">
+            <i data-lucide="activity"></i> Live Telemetry
+            <button id="refresh-loc-btn" class="btn btn-sm btn-icon-text" title="Refresh Location">
+              <i data-lucide="refresh-cw"></i> Refresh
+            </button>
+          </div>
+
+          <div class="telemetry-grid">
+            <div class="tele-item">
+              <span class="label">Latitude</span>
+              <span class="value" id="val-lat">--</span>
+            </div>
+            <div class="tele-item">
+              <span class="label">Longitude</span>
+              <span class="value" id="val-lng">--</span>
+            </div>
+            <div class="tele-item">
+              <span class="label">Accuracy</span>
+              <span class="value" id="val-acc">--</span>
+            </div>
+            <div class="tele-item">
+              <span class="label">Heading</span>
+              <span class="value" id="val-heading">--</span>
+            </div>
+            <div class="tele-item">
+              <span class="label">Altitude</span>
+              <span class="value" id="val-alt">--</span>
+            </div>
+            <div class="tele-item">
+              <span class="label">Speed</span>
+              <span class="value" id="val-speed">--</span>
+            </div>
+          </div>
+
+          <div class="tele-footer">
+            <span class="timestamp-label"><i data-lucide="clock"></i> Last updated: <span id="val-timestamp">Never</span></span>
+          </div>
+
+          <div class="telemetry-actions">
+            <button id="copy-coords-btn" class="btn btn-secondary btn-sm">
+              <i data-lucide="copy"></i> Copy Coords
+            </button>
+            <button id="share-loc-btn" class="btn btn-secondary btn-sm">
+              <i data-lucide="share-2"></i> Share
+            </button>
+          </div>
+        </div>
+
+        <!-- Mini Map Card -->
+        <div class="glass-card map-card">
+          <div class="card-title">
+            <i data-lucide="map-pin"></i> Location Radar
+          </div>
+          <div class="radar-container" id="radar-container">
+            <div class="radar-sweep"></div>
+            <div class="radar-center"></div>
+            <div class="radar-blip" id="radar-blip"></div>
+            <div class="radar-grid"></div>
+            <span class="radar-placeholder-text" id="map-status-text">Click "Detect Location" to pinpoint position</span>
+          </div>
+        </div>
+
+        <!-- Recent History Card -->
+        <div class="glass-card history-card">
+          <div class="card-title">
+            <i data-lucide="history"></i> Direction History
+          </div>
+          <ul class="history-list" id="history-list">
+            <li class="history-empty">No logged directions yet.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script> 
+        /**
+ * AeroCompass - Engine & Controller Logic
+ * Handles device sensors, canvas background, UI updates, and location telemetry.
+ */
+
+document.addEventListener('DOMContentLoaded', () => {
+  // --- DOM Element References ---
+  const compassDial = document.getElementById('compass-dial');
+  const compassNeedle = document.getElementById('compass-needle');
+  const degreeReadout = document.getElementById('degree-readout');
+  const cardinalReadout = document.getElementById('cardinal-readout');
+  const sensorStatus = document.getElementById('sensor-status');
+  const calibrationBtn = document.getElementById('calibration-btn');
+  
+  const detectLocBtn = document.getElementById('detect-loc-btn');
+  const refreshLocBtn = document.getElementById('refresh-loc-btn');
+  const resetCompassBtn = document.getElementById('reset-compass-btn');
+  const themeToggleBtn = document.getElementById('theme-toggle');
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
+  const copyCoordsBtn = document.getElementById('copy-coords-btn');
+  const shareLocBtn = document.getElementById('share-loc-btn');
+  const dirChips = document.querySelectorAll('.dir-chip');
+  
+  // Telemetry DOM
+  const valLat = document.getElementById('val-lat');
+  const valLng = document.getElementById('val-lng');
+  const valAcc = document.getElementById('val-acc');
+  const valHeading = document.getElementById('val-heading');
+  const valAlt = document.getElementById('val-alt');
+  const valSpeed = document.getElementById('val-speed');
+  const valTimestamp = document.getElementById('val-timestamp');
+  
+  const radarBlip = document.getElementById('radar-blip');
+  const mapStatusText = document.getElementById('map-status-text');
+  const historyList = document.getElementById('history-list');
+
+  // --- State Variables ---
+  let currentDegree = 0;
+  let history = [];
+  let isDeviceOrientationActive = false;
+  let watchPositionId = null;
+
+  // Render Lucide icons
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+
+  // ==========================================================================
+  // 1. Compass Dial Generation
+  // ==========================================================================
+  function initCompassDial() {
+    const cardinalAngles = {
+      'N': 0, 'NE': 45, 'E': 90, 'SE': 135,
+      'S': 180, 'SW': 225, 'W': 270, 'NW': 315
+    };
+
+    // Generate 360 degree ticks (every 5 deg)
+    for (let i = 0; i < 360; i += 5) {
+      const tick = document.createElement('div');
+      tick.className = `tick-mark ${i % 30 === 0 ? 'major' : ''}`;
+      tick.style.transform = `translateX(-50%) rotate(${i}deg)`;
+      compassDial.appendChild(tick);
+    }
+
+    // Generate Cardinal Labels
+    Object.entries(cardinalAngles).forEach(([label, angle]) => {
+      const lbl = document.createElement('div');
+      lbl.className = `cardinal-label ${label}`;
+      lbl.innerText = label;
+      lbl.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+      compassDial.appendChild(lbl);
+    });
+  }
+
+  // ==========================================================================
+  // 2. Degree & Cardinal Logic
+  // ==========================================================================
+  function getCardinalDirection(deg) {
+    const normalized = (deg % 360 + 360) % 360;
+    const directions = [
+      { name: 'North', min: 337.5, max: 360 },
+      { name: 'North', min: 0, max: 22.5 },
+      { name: 'North-East', min: 22.5, max: 67.5 },
+      { name: 'East', min: 67.5, max: 112.5 },
+      { name: 'South-East', min: 112.5, max: 157.5 },
+      { name: 'South', min: 157.5, max: 202.5 },
+      { name: 'South-West', min: 202.5, max: 247.5 },
+      { name: 'West', min: 247.5, max: 292.5 },
+      { name: 'North-West', min: 292.5, max: 337.5 }
+    ];
+
+    const match = directions.find(d => normalized >= d.min && normalized < d.max);
+    return match ? match.name : 'North';
+  }
+
+  function setCompassAngle(deg, logToHistory = false) {
+    currentDegree = Math.round((deg % 360 + 360) % 360);
+    
+    // Smooth visual orientation adjustment
+    compassDial.style.transform = `rotate(${-currentDegree}deg)`;
+    compassNeedle.style.transform = `rotate(${currentDegree}deg)`;
+    
+    degreeReadout.innerText = `${currentDegree}°`;
+    const cardinalName = getCardinalDirection(currentDegree);
+    cardinalReadout.innerText = cardinalName;
+
+    updateActiveChip(currentDegree);
+
+    if (logToHistory) {
+      addHistoryItem(currentDegree, cardinalName);
+    }
+  }
+
+  function updateActiveChip(deg) {
+    dirChips.forEach(chip => {
+      const chipDeg = parseInt(chip.getAttribute('data-degree'), 10);
+      const diff = Math.abs(chipDeg - deg);
+      if (diff < 22.5 || diff > 337.5) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
+  }
+
+  // ==========================================================================
+  // 3. Sensor & Orientation Handlers
+  // ==========================================================================
+  function handleOrientation(e) {
+    let alpha = e.alpha; // Z-axis rotation [0, 360]
+    
+    // iOS WebkitCompassHeading fallback
+    if (e.webkitCompassHeading) {
+      alpha = e.webkitCompassHeading;
+    }
+
+    if (alpha !== null && alpha !== undefined) {
+      if (!isDeviceOrientationActive) {
+        isDeviceOrientationActive = true;
+        sensorStatus.innerHTML = `<span class="status-dot active"></span> Live Sensors`;
+      }
+      setCompassAngle(alpha);
+    }
+  }
+
+  function initSensors() {
+    if (window.DeviceOrientationEvent) {
+      // iOS 13+ permission request
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation, true);
+            } else {
+              sensorStatus.innerText = 'Sensor Permission Denied';
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+      }
+    } else {
+      sensorStatus.innerText = 'Sensors Unsupported';
+    }
+  }
+
+  // ==========================================================================
+  // 4. Geolocation Logic
+  // ==========================================================================
+  function handleLocationSuccess(pos) {
+    const coords = pos.coords;
+
+    valLat.innerText = coords.latitude.toFixed(5) + '°';
+    valLng.innerText = coords.longitude.toFixed(5) + '°';
+    valAcc.innerText = coords.accuracy ? `±${Math.round(coords.accuracy)}m` : 'N/A';
+    valAlt.innerText = coords.altitude ? `${Math.round(coords.altitude)}m` : 'N/A';
+    valSpeed.innerText = coords.speed ? `${(coords.speed * 3.6).toFixed(1)} km/h` : '0 km/h';
+    valHeading.innerText = coords.heading ? `${Math.round(coords.heading)}°` : 'N/A';
+    valTimestamp.innerText = new Date(pos.timestamp).toLocaleTimeString();
+
+    // If device heading is available via GPS geolocation
+    if (coords.heading && !isDeviceOrientationActive) {
+      setCompassAngle(coords.heading);
+    }
+
+    // Update Radar Visualization Blip
+    radarBlip.style.display = 'block';
+    // Position mock blip relative to accuracy
+    const randomOffset = Math.min(coords.accuracy / 2, 40);
+    radarBlip.style.top = `calc(50% + ${(Math.random() - 0.5) * randomOffset}px)`;
+    radarBlip.style.left = `calc(50% + ${(Math.random() - 0.5) * randomOffset}px)`;
+    mapStatusText.innerText = 'Signal Acquired';
+  }
+
+  function handleLocationError(err) {
+    mapStatusText.innerText = `Location error: ${err.message}`;
+    alert(`Could not fetch location: ${err.message}`);
+  }
+
+  function requestLocation() {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    mapStatusText.innerText = 'Acquiring GPS fix...';
+
+    if (watchPositionId) {
+      navigator.geolocation.clearWatch(watchPositionId);
+    }
+
+    watchPositionId = navigator.geolocation.watchPosition(
+      handleLocationSuccess,
+      handleLocationError,
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+
+  // ==========================================================================
+  // 5. Utility Actions & History
+  // ==========================================================================
+  function addHistoryItem(deg, name) {
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    history.unshift({ deg, name, time });
+    
+    if (history.length > 5) history.pop();
+    
+    renderHistory();
+  }
+
+  function renderHistory() {
+    if (history.length === 0) {
+      historyList.innerHTML = `<li class="history-empty">No logged directions yet.</li>`;
+      return;
+    }
+
+    historyList.innerHTML = history.map(item => `
+      <li class="history-item">
+        <span><strong>${item.name}</strong> (${item.deg}°)</span>
+        <span style="color: var(--text-muted); font-size: 0.75rem;">${item.time}</span>
+      </li>
+    `).join('');
+  }
+
+  function copyCoordinates() {
+    const lat = valLat.innerText;
+    const lng = valLng.innerText;
+    if (lat === '--' || lng === '--') {
+      alert('No location data available to copy.');
+      return;
+    }
+    const text = `Latitude: ${lat}, Longitude: ${lng}`;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Coordinates copied to clipboard!');
+    });
+  }
+
+  function shareLocation() {
+    const lat = valLat.innerText;
+    const lng = valLng.innerText;
+    if (lat === '--' || lng === '--') {
+      alert('No location data available to share.');
+      return;
+    }
+
+    const shareData = {
+      title: 'My Current Location',
+      text: `Check out my coordinates: ${lat}, ${lng}`,
+      url: `https://maps.google.com/?q=${lat.replace('°','')},${lng.replace('°','')}`
+    };
+
+    if (navigator.share) {
+      navigator.share(shareData).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(shareData.url).then(() => {
+        alert('Google Maps link copied to clipboard!');
+      });
+    }
+  }
+
+  // ==========================================================================
+  // 6. Particle Background Animation
+  // ==========================================================================
+  function initParticleCanvas() {
+    const canvas = document.getElementById('particles-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 2 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.3;
+        this.speedY = (Math.random() - 0.5) * 0.3;
+        this.alpha = Math.random() * 0.5 + 0.1;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.reset();
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = `rgba(56, 189, 248, ${this.alpha})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 40; i++) {
+      particles.push(new Particle());
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  }
+
+  // ==========================================================================
+  // 7. Event Listeners Initialization
+  // ==========================================================================
+  function attachEventListeners() {
+    // Direction chips selection
+    dirChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const targetDegree = parseInt(chip.getAttribute('data-degree'), 10);
+        setCompassAngle(targetDegree, true);
+      });
+    });
+
+    // Detect location & sensors
+    detectLocBtn.addEventListener('click', () => {
+      initSensors();
+      requestLocation();
+    });
+
+    refreshLocBtn.addEventListener('click', requestLocation);
+
+    // Reset Compass Animation
+    resetCompassBtn.addEventListener('click', () => {
+      compassDial.style.transition = 'transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      compassNeedle.style.transition = 'transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      
+      setCompassAngle(0, true);
+
+      setTimeout(() => {
+        compassDial.style.transition = 'transform 0.15s ease-out';
+        compassNeedle.style.transition = 'transform 0.15s ease-out';
+      }, 800);
+    });
+
+    // Compass Calibration Mock Feature
+    calibrationBtn.addEventListener('click', () => {
+      compassDial.classList.add('calibrating');
+      calibrationBtn.innerText = 'Calibrating...';
+      
+      setTimeout(() => {
+        compassDial.classList.remove('calibrating');
+        calibrationBtn.innerText = 'Calibrate';
+        alert('Compass sensor calibrated successfully!');
+      }, 2000);
+    });
+
+    // Dark/Light Theme Toggle
+    themeToggleBtn.addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      document.body.classList.toggle('dark-mode');
+    });
+
+    // Fullscreen Toggle
+    fullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => alert(err.message));
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    });
+
+    // Copy & Share
+    copyCoordsBtn.addEventListener('click', copyCoordinates);
+    shareLocBtn.addEventListener('click', shareLocation);
+  }
+
+  // ==========================================================================
+  // App Bootstrapper
+  // ==========================================================================
+  initCompassDial();
+  attachEventListeners();
+  initParticleCanvas();
+  setCompassAngle(0);
+});
+  </script>
+</body>
+</html>
